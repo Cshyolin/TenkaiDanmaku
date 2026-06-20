@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC OFF)
+set(CMAKE_AUTORCC ON)
 
 # ── Qt6 ──────────────────────────────────────────────────────────────────
 find_package(Qt6 REQUIRED COMPONENTS Widgets WebSockets Network)
@@ -83,7 +83,9 @@ set(HEADERS
 )
 
 # ── Executable ───────────────────────────────────────────────────────────
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+set(RESOURCES resources/resources.qrc)
+
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Widgets
