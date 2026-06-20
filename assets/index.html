@@ -1,118 +1,558 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>弹幕发送</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Microsoft YaHei", sans-serif;
-         background: #1a1a2e; color: #eee; padding: 20px; min-height: 100vh; }
-  h3 { margin-bottom: 12px; color: #e94560; }
-  h4 { margin: 16px 0 8px; }
-  #status { display: flex; align-items: center; gap: 6px; font-size: 13px;
-            margin-bottom: 14px; padding: 6px 10px; background: #16213e;
-            border-radius: 6px; }
-  #status-dot { width: 10px; height: 10px; border-radius: 50%; background: #e74c3c;
-                display: inline-block; flex-shrink: 0; }
-  #status-dot.connected { background: #4caf50; }
-  #toast { display: none; background: #e74c3c; color: #fff; padding: 8px 14px;
-           border-radius: 6px; font-size: 14px; margin-bottom: 10px; }
-  #input-box { display: flex; gap: 8px; margin-bottom: 4px; }
-  #msg { flex: 1; padding: 10px 12px; font-size: 16px; border: 1px solid #0f3460;
-         border-radius: 8px; background: #16213e; color: #eee; outline: none; }
-  #msg:focus { border-color: #e94560; }
-  button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px;
-           background: #e94560; color: #fff; cursor: pointer; font-weight: bold; }
-  button:active { background: #c23152; }
-  #history { border: 1px solid #0f3460; border-radius: 8px; padding: 10px;
-             height: 220px; overflow-y: auto; background: #16213e; }
-  .danmaku-item { margin: 4px 0; padding: 4px 8px; color: #ddd;
-                  border-bottom: 1px solid #0f3460; word-break: break-all; }
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹幕发送</title>
+    <style>
+        /* ===== CSS Variables ===== */
+        :root {
+            /* 深色模式 (默认) */
+            --bg-body: #000000;
+            --bg-card: #0d0d0d;
+            --bg-input: #1a1a1a;
+            --bg-hover: #1a1a1a;
+            --bg-status: #0d0d0d;
+            --bg-toast: #4169E1;
+
+            --text-primary: #f0f0f0;
+            --text-secondary: #aaaaaa;
+            --text-muted: #666666;
+            --text-inverse: #1a1a2e;
+
+            --border: #2a2a2a;
+            --border-light: #1a1a1a;
+            --border-focus: #4169E1;
+
+            --accent: #4169E1;
+            --accent-hover: #5A4BD1;
+            --accent-active: #4A3CB5;
+
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+            --radius: 10px;
+            --radius-sm: 6px;
+
+            --transition: 0.3s ease;
+
+            --status-dot-on: #4caf50;
+            --status-dot-off: #555555;
+
+            --scrollbar-track: #1a1a1a;
+            --scrollbar-thumb: #333333;
+            --scrollbar-thumb-hover: #444444;
+        }
+
+        /* 浅色模式 */
+        [data-theme="light"] {
+            --bg-body: #f2f4f8;
+            --bg-card: #ffffff;
+            --bg-input: #f0f2f5;
+            --bg-hover: #f0f2f5;
+            --bg-status: #f8f9fc;
+            --bg-toast: #4169E1;
+
+            --text-primary: #1a1a2e;
+            --text-secondary: #5a5a7a;
+            --text-muted: #8a8a9a;
+            --text-inverse: #ffffff;
+
+            --border: #e1e4e8;
+            --border-light: #f0f2f5;
+            --border-focus: #4169E1;
+
+            --accent: #4169E1;
+            --accent-hover: #5A4BD1;
+            --accent-active: #4A3CB5;
+
+            --shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+
+            --status-dot-on: #2e7d32;
+            --status-dot-off: #b0b0b0;
+
+            --scrollbar-track: #e8ecf0;
+            --scrollbar-thumb: #c8ccd0;
+            --scrollbar-thumb-hover: #b0b4b8;
+        }
+
+        /* ===== Reset & Base ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            padding: 24px 20px;
+            min-height: 100vh;
+            transition: background var(--transition), color var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header h3 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+            transition: color var(--transition);
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== Theme Toggle ===== */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            user-select: none;
+            font-family: inherit;
+            line-height: 1;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+            transform: scale(1.02);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.96);
+        }
+
+        .theme-toggle .icon {
+            font-size: 18px;
+            transition: transform var(--transition);
+        }
+
+        /* ===== Status Bar ===== */
+        #status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            padding: 8px 14px;
+            background: var(--bg-status);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+            transition: background var(--transition), border var(--transition), color var(--transition);
+            flex-wrap: wrap;
+        }
+
+        #status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--status-dot-off);
+            display: inline-block;
+            flex-shrink: 0;
+            transition: background var(--transition);
+        }
+
+        #status-dot.connected {
+            background: var(--status-dot-on);
+        }
+
+        #status-text {
+            transition: color var(--transition);
+            flex: 1;
+        }
+
+        /* ===== Toast ===== */
+        #toast {
+            display: none;
+            background: var(--bg-toast);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            margin-bottom: 12px;
+            transition: background var(--transition);
+            animation: toastIn 0.3s ease;
+        }
+
+        #toast.show {
+            display: block;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Input Area ===== */
+        #input-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        #msg {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            outline: none;
+            transition: all var(--transition);
+            font-family: inherit;
+            min-width: 0;
+        }
+
+        #msg::placeholder {
+            color: var(--text-muted);
+            transition: color var(--transition);
+        }
+
+        #msg:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.25);
+        }
+
+        #msg:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ===== Send Button ===== */
+        .btn-send {
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            border-radius: var(--radius);
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: inherit;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-send:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(65, 105, 225, 0.35);
+        }
+
+        .btn-send:active {
+            background: var(--accent-active);
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ===== History Section ===== */
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 18px 0 10px;
+        }
+
+        .history-header h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: color var(--transition);
+            margin: 0;
+        }
+
+        .history-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            transition: color var(--transition);
+        }
+
+        #history {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 10px 12px;
+            height: 220px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            transition: background var(--transition), border var(--transition);
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar */
+        #history::-webkit-scrollbar { width: 5px; }
+        #history::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 4px; }
+        #history::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+        #history::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+        /* Danmaku Items */
+        .danmaku-item {
+            padding: 6px 10px;
+            margin: 3px 0;
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            background: var(--bg-hover);
+            border-left: 3px solid var(--accent);
+            transition: all var(--transition);
+            word-break: break-all;
+            font-size: 14px;
+            line-height: 1.5;
+            animation: itemIn 0.25s ease;
+        }
+
+        .danmaku-item:first-child { margin-top: 0; }
+        .danmaku-item:last-child  { margin-bottom: 0; }
+
+        @keyframes itemIn {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            font-size: 14px;
+            transition: color var(--transition);
+            user-select: none;
+        }
+
+        .empty-state .icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            opacity: 0.6;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 500px) {
+            body { padding: 16px 12px; }
+            .header h3 { font-size: 19px; }
+            .theme-toggle { padding: 6px 12px; font-size: 13px; }
+            .theme-toggle .icon { font-size: 16px; }
+            #input-box { flex-wrap: wrap; }
+            #msg { font-size: 15px; padding: 10px 14px; min-width: 100%; }
+            .btn-send { padding: 10px 20px; font-size: 15px; width: 100%; }
+            #history { height: 170px; padding: 8px 10px; }
+            .danmaku-item { font-size: 13px; padding: 5px 8px; }
+            #status { font-size: 12px; padding: 6px 12px; }
+            .history-header h4 { font-size: 14px; }
+        }
+
+        @media (max-width: 380px) {
+            .header { flex-direction: column; align-items: stretch; gap: 8px; }
+            .header-actions { justify-content: flex-end; }
+            .theme-toggle { align-self: flex-end; }
+        }
+    </style>
 </head>
 <body>
-  <h3>发送弹幕</h3>
-  <div id="status">
-    <span id="status-dot"></span>
-    <span id="status-text">连接中...</span>
-  </div>
-  <div id="toast"></div>
-  <div id="input-box">
-    <input type="text" id="msg" placeholder="输入弹幕..." maxlength="60" autofocus>
-    <button onclick="send()">发送</button>
-  </div>
-  <h4>最近弹幕</h4>
-  <div id="history"></div>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h3>📡 弹幕发送</h3>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                    <span class="icon" id="themeIcon">🌙</span>
+                    <span class="label" id="themeLabel">深色</span>
+                </button>
+            </div>
+        </div>
 
-  <script>
-    const wsUrl = 'ws://' + window.location.hostname + ':{{WS_PORT}}';
-    var ws;
-    var historyDiv = document.getElementById('history');
-    var statusDot = document.getElementById('status-dot');
-    var statusText = document.getElementById('status-text');
-    var toast = document.getElementById('toast');
-    var historyMax = 10;
-    var historyList = [];
+        <!-- Status -->
+        <div id="status">
+            <span id="status-dot"></span>
+            <span id="status-text">连接中...</span>
+        </div>
 
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.style.display = 'block';
-      setTimeout(function() { toast.style.display = 'none'; }, 3000);
-    }
+        <!-- Toast -->
+        <div id="toast"></div>
 
-    function setConnected(ok) {
-      if (ok) {
-        statusDot.className = 'connected';
-        statusText.textContent = '已连接';
-      } else {
-        statusDot.className = '';
-        statusText.textContent = '已断开，正在重连...';
-      }
-    }
+        <!-- Input -->
+        <div id="input-box">
+            <input type="text" id="msg" placeholder="输入弹幕…" maxlength="60" autofocus>
+            <button class="btn-send" onclick="send()">发送</button>
+        </div>
 
-    function connect() {
-      ws = new WebSocket(wsUrl);
-      ws.onopen = function() { setConnected(true); };
-      ws.onmessage = function(event) { addHistory(event.data); };
-      ws.onclose = function() {
-        setConnected(false);
-        setTimeout(connect, 3000);
-      };
-      ws.onerror = function() {};
-    }
+        <!-- History -->
+        <div class="history-header">
+            <h4>📋 最近弹幕</h4>
+            <span class="history-count" id="historyCount">0 条</span>
+        </div>
+        <div id="history">
+            <div class="empty-state">
+                <span class="icon">💬</span>
+                <span>暂无弹幕，快来发送第一条吧</span>
+            </div>
+        </div>
+    </div>
 
-    function send() {
-      var input = document.getElementById('msg');
-      var text = input.value.trim();
-      if (!text) return;
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showToast('连接已断开，请稍候或刷新页面');
-        return;
-      }
-      ws.send(text);
-      input.value = '';
-      input.focus();
-    }
+    <script>
+        const wsUrl = 'ws://' + window.location.hostname + ':{{WS_PORT}}';
+        var ws;
+        var historyDiv = document.getElementById('history');
+        var statusDot = document.getElementById('status-dot');
+        var statusText = document.getElementById('status-text');
+        var toast = document.getElementById('toast');
+        var historyCount = document.getElementById('historyCount');
+        var historyMax = 10;
+        var historyList = [];
 
-    function addHistory(text) {
-      historyList.push(text);
-      if (historyList.length > historyMax) historyList.shift();
-      historyDiv.innerHTML = historyList.map(function(t) {
-        return '<div class="danmaku-item">' + escapeHtml(t) + '</div>';
-      }).join('');
-      historyDiv.scrollTop = historyDiv.scrollHeight;
-    }
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(function() {
+                toast.classList.remove('show');
+            }, 3000);
+        }
 
-    function escapeHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
+        function setConnected(ok) {
+            if (ok) {
+                statusDot.className = 'connected';
+                statusText.textContent = '已连接';
+            } else {
+                statusDot.className = '';
+                statusText.textContent = '已断开，正在重连…';
+            }
+        }
 
-    document.getElementById('msg').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') send();
-    });
+        function connect() {
+            try {
+                ws = new WebSocket(wsUrl);
+                ws.onopen = function() { setConnected(true); };
+                ws.onmessage = function(event) { addHistory(event.data); };
+                ws.onclose = function() {
+                    setConnected(false);
+                    setTimeout(connect, 3000);
+                };
+                ws.onerror = function() {};
+            } catch (e) {
+                setConnected(false);
+                setTimeout(connect, 3000);
+            }
+        }
 
-    connect();
-  </script>
+        function send() {
+            var input = document.getElementById('msg');
+            var text = input.value.trim();
+            if (!text) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showToast('连接已断开，请稍候或刷新页面');
+                return;
+            }
+            ws.send(text);
+            input.value = '';
+            input.focus();
+        }
+
+        function addHistory(text) {
+            var empty = historyDiv.querySelector('.empty-state');
+            if (empty) empty.remove();
+
+            historyList.push(text);
+            if (historyList.length > historyMax) historyList.shift();
+
+            historyDiv.innerHTML = historyList.map(function(t) {
+                return '<div class="danmaku-item">' + escapeHtml(t) + '</div>';
+            }).join('');
+
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+            updateHistoryCount();
+        }
+
+        function updateHistoryCount() {
+            if (historyCount) {
+                historyCount.textContent = historyList.length + ' 条';
+            }
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        document.getElementById('msg').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') send();
+        });
+
+        connect();
+
+        // ===== 主题切换 =====
+        (function initTheme() {
+            var toggle = document.getElementById('themeToggle');
+            var icon = document.getElementById('themeIcon');
+            var label = document.getElementById('themeLabel');
+
+            var storedTheme = 'dark';
+            try {
+                var tmp = localStorage.getItem('danmaku-theme');
+                if (tmp) storedTheme = tmp;
+            } catch (e) {}
+
+            applyTheme(storedTheme);
+
+            toggle.addEventListener('click', function() {
+                var current = document.documentElement.getAttribute('data-theme') || 'dark';
+                var next = (current === 'dark') ? 'light' : 'dark';
+                applyTheme(next);
+                try {
+                    localStorage.setItem('danmaku-theme', next);
+                } catch (e) {}
+            });
+
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                if (theme === 'light') {
+                    icon.textContent = '☀️';
+                    label.textContent = '浅色';
+                } else {
+                    icon.textContent = '🌙';
+                    label.textContent = '深色';
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

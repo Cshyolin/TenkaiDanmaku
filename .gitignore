@@ -36,3 +36,4 @@ logs/
 
 # Specific exclusions
 src/README.md
+assets/temp.html
