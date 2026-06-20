@@ -26,6 +26,10 @@ signals:
     /// Emitted when the window is hidden (so tray menu can update).
     void windowHidden();
 
+public:
+    /// Set to true before quitting so closeEvent accepts the close.
+    void setQuitting(bool v) { m_quitting = v; }
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 
@@ -41,4 +45,5 @@ private:
     QLabel *m_ipv4Status   = nullptr;
     QWidget *m_ipv6Group   = nullptr;
     QWidget *m_ipv4Group   = nullptr;
+    bool     m_quitting    = false;
 };

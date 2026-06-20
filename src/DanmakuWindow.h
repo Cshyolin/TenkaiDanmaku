@@ -29,6 +29,9 @@ public:
     /// Set the ratio of screen height used for danmaku tracks (0.1 – 0.5).
     void setTrackAreaRatio(double ratio);
 
+    /// Set to true before quitting so the window closes cleanly.
+    void setQuitting(bool v) { m_quitting = v; }
+
 public slots:
     /// Called when a message is received from the server.
     void addDanmaku(const QString &text, const QString &senderIp);
@@ -38,6 +41,7 @@ public slots:
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     void recalcScene();
@@ -57,6 +61,7 @@ private:
     double  m_trackAreaRatio  = 0.3;
     int     m_minAnimMs       = 5000;
     int     m_maxAnimMs       = 8000;
+    bool    m_quitting        = false;
 
 private slots:
     void onConnected();

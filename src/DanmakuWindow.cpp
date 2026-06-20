@@ -2,8 +2,8 @@
 
 #include <QGraphicsScene>
 #include <QGraphicsTextItem>
+#include <QCloseEvent>
 #include <QPropertyAnimation>
-#include <QVariantAnimation>
 #include <QRandomGenerator>
 #include <QScreen>
 #include <QGuiApplication>
@@ -132,6 +132,14 @@ void DanmakuWindow::resizeEvent(QResizeEvent *event)
     recalcTracks();
 }
 
+void DanmakuWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_quitting)
+        event->accept();
+    else
+        event->ignore();
+}
+
 // ── Track selection ──────────────────────────────────────────────────────
 
 int DanmakuWindow::selectTrack()
@@ -180,9 +188,14 @@ void DanmakuWindow::addDanmaku(const QString &text, const QString & /*senderIp*/
 {
     auto [displayText, color] = parseDanmaku(text);
 
-    auto *item = new QGraphicsTextItem(displayText);
+    // Use setHtml() with an inline <span style="color:..."> to guarantee
+    // the colour is applied.  setDefaultTextColor() is unreliable because
+    // QGraphicsTextItem's internal QTextDocument can ignore it.
+    auto *item = new QGraphicsTextItem;
     item->setFont(m_font);
-    item->setDefaultTextColor(color);
+    QString html = QStringLiteral("<span style=\"color:%1; white-space:nowrap;\">%2</span>")
+                       .arg(color.name(), displayText.toHtmlEscaped());
+    item->setHtml(html);
 
     const int track = selectTrack();
     const int trackH = QFontMetrics(m_font).height() + m_margin;

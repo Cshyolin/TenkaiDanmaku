@@ -202,10 +202,12 @@ int main(int argc, char *argv[])
             configDialog.activateWindow();
         });
 
-    // Tray: quit — just log and quit; stack unwinding handles cleanup.
+    // Tray: quit — let windows close cleanly, then shut down.
     QObject::connect(&trayManager, &TrayManager::quitApp,
         [&]() {
             Logger::instance()->logEvent("用户退出");
+            controlPanel.setQuitting(true);
+            danmakuWin.setQuitting(true);
             app.quit();
         });
 

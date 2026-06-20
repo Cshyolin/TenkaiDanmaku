@@ -32,14 +32,16 @@ void TrayManager::setupMenu()
     m_showQrAction = m_menu->addAction("显示二维码");
     m_showQrAction->setCheckable(true);
     m_showQrAction->setChecked(true);
-    connect(m_showQrAction, &QAction::toggled, this, [this](bool checked) {
+    // Use triggered (not toggled) to avoid re-entrant signal loops when
+    // setChecked() is called programmatically from outside.
+    connect(m_showQrAction, &QAction::triggered, this, [this](bool checked) {
         emit toggleControlPanel();
     });
 
     m_showDanmakuAction = m_menu->addAction("显示弹幕");
     m_showDanmakuAction->setCheckable(true);
     m_showDanmakuAction->setChecked(true);
-    connect(m_showDanmakuAction, &QAction::toggled, this, [this](bool checked) {
+    connect(m_showDanmakuAction, &QAction::triggered, this, [this](bool checked) {
         emit toggleDanmakuWindow(checked);
     });
 
@@ -63,11 +65,13 @@ void TrayManager::show()
 
 void TrayManager::setQrCodesChecked(bool checked)
 {
+    QSignalBlocker b(m_showQrAction);
     m_showQrAction->setChecked(checked);
 }
 
 void TrayManager::setDanmakuChecked(bool checked)
 {
+    QSignalBlocker b(m_showDanmakuAction);
     m_showDanmakuAction->setChecked(checked);
 }
 

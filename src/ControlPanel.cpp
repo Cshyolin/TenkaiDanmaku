@@ -187,6 +187,10 @@ QPixmap ControlPanel::createPlaceholder(const QString &text, int size)
 
 void ControlPanel::closeEvent(QCloseEvent *event)
 {
+    if (m_quitting) {
+        event->accept();    // allow normal close during shutdown
+        return;
+    }
     hide();
     emit windowHidden();
     event->ignore();
