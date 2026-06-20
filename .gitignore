@@ -1,0 +1,38 @@
+# Build outputs
+build/
+cmake-build-*/
+out/
+*.o
+*.obj
+*.exe
+*.app
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Qt generated
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# IDE
+.vscode/settings.json
+.idea/
+*.pro.user
+*.pro.user.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Log files (generated at runtime)
+logs/
+
+# Specific exclusions
+src/README.md
