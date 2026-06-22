@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
     app.setApplicationName("TenkaiDanmaku");
     app.setOrganizationName("TenkaiDanmaku");
     app.setQuitOnLastWindowClosed(false);  // tray persistence
+    app.setWindowIcon(QIcon(":/icons/icon.ico"));
 
     if (!checkSingleInstance())
         return 0;

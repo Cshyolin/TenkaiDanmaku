@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file alias="index.html">../assets/index.html</file>
+        <file alias="icons/icon.ico">icons/icon.ico</file>
     </qresource>
 </RCC>

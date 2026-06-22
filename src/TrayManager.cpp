@@ -80,27 +80,26 @@ void TrayManager::setDanmakuChecked(bool checked)
 
 QIcon TrayManager::createTrayIcon()
 {
-    const int size = 64;  // will be scaled by the system
+    // Use the embedded multi-size icon if available
+    QIcon ico(":/icons/icon.ico");
+    if (!ico.isNull())
+        return ico;
 
+    // Fallback: programmatic icon
+    const int size = 64;
     QPixmap pm(size, size);
     pm.fill(Qt::transparent);
-
     QPainter p(&pm);
     p.setRenderHint(QPainter::Antialiasing);
-
-    // Background circle
-    p.setBrush(QColor(0xe9, 0x45, 0x60));  // accent red
+    p.setBrush(QColor(0xe9, 0x45, 0x60));
     p.setPen(Qt::NoPen);
     p.drawEllipse(4, 4, size - 8, size - 8);
-
-    // Text
     p.setPen(Qt::white);
     QFont f = p.font();
     f.setPixelSize(static_cast<int>(size * 0.55));
     f.setBold(true);
     p.setFont(f);
     p.drawText(pm.rect(), Qt::AlignCenter, "弹");
-
     p.end();
     return QIcon(pm);
 }
