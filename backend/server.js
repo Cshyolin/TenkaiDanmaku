@@ -5,6 +5,7 @@ const { WebSocketServer } = require('ws');
 
 // ── Config ────────────────────────────────────────────────────────────────
 const PORT              = parseInt(process.env.PORT || '3000', 10);
+const PATH_PREFIX       = process.env.PATH_PREFIX || '';
 const AUTH_TIMEOUT_MS   = parseInt(process.env.AUTH_TIMEOUT_MS || '5000', 10);
 const RATE_LIMIT_MS     = parseInt(process.env.RATE_LIMIT_MS || '1000', 10);
 const MAX_CONNS_PER_IP  = parseInt(process.env.MAX_CONNS_PER_IP || '5', 10);
@@ -75,8 +76,14 @@ const MIME = {
 const server = http.createServer((req, res) => {
     if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
 
-    // Strip query string and normalise
+    // Strip platform path prefix if set, then query string
     let urlPath = req.url.split('?')[0];
+    if (PATH_PREFIX && urlPath.startsWith(PATH_PREFIX))
+        urlPath = urlPath.slice(PATH_PREFIX.length) || '/';
+
+    // Let WebSocket upgrade requests bypass the static file handler
+    if (urlPath === '/ws' || urlPath.endsWith('/ws')) return;
+
     if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
 
     let filePath = path.join(__dirname, 'public', urlPath);
@@ -100,7 +107,7 @@ const server = http.createServer((req, res) => {
 
 // ── WebSocket ────────────────────────────────────────────────────────────
 
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0].trim()
