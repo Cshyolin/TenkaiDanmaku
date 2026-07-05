@@ -8,26 +8,23 @@ class QSlider;
 class QComboBox;
 class QLineEdit;
 class QLabel;
+class QCheckBox;
 
-/// Configuration dialog opened from the tray menu.
 class ConfigDialog : public QDialog {
     Q_OBJECT
 public:
     explicit ConfigDialog(QWidget *parent = nullptr);
 
-    /// Load settings from QSettings into the UI controls.
     void loadSettings();
-
-    /// Save UI control values to QSettings.
     void saveSettings();
 
 signals:
-    /// Emitted after settings are saved so other modules can apply them.
     void settingsChanged();
 
 private:
     void setupUi();
 
+    // Danmaku display
     QFontComboBox *m_fontCombo     = nullptr;
     QSpinBox      *m_fontSize      = nullptr;
     QSpinBox      *m_httpPort      = nullptr;
@@ -36,4 +33,9 @@ private:
     QComboBox     *m_speedCombo    = nullptr;
     QSpinBox      *m_rateLimit     = nullptr;
     QLineEdit     *m_logDirEdit    = nullptr;
+
+    // Relay
+    QLineEdit     *m_relayUrlEdit  = nullptr;
+    QComboBox     *m_defaultMode   = nullptr;
+    QCheckBox     *m_closeLocalInRelay = nullptr;
 };

@@ -1,4 +1,4 @@
-# Build outputs
+# ── Build outputs ─────────────────────────────────────────────────────────
 build/
 cmake-build-*/
 out/
@@ -6,8 +6,11 @@ out/
 *.obj
 *.exe
 *.app
+*.dll
+*.so
+*.dylib
 
-# CMake generated
+# ── CMake generated ───────────────────────────────────────────────────────
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
@@ -15,28 +18,46 @@ Makefile
 *.cmake
 !CMakeLists.txt
 
-# Qt generated
+# ── Qt generated ──────────────────────────────────────────────────────────
 moc_*.cpp
 ui_*.h
 qrc_*.cpp
 
-# IDE
-.vscode/settings.json
+# ── IDE / Editor ──────────────────────────────────────────────────────────
+.vscode/
 .idea/
 *.pro.user
 *.pro.user.*
+*.swp
+*.swo
+*~
 
-# OS junk
+# ── OS junk ───────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
-# Log files (generated at runtime)
+# ── Runtime outputs ───────────────────────────────────────────────────────
 logs/
+*.log
 
-# Specific exclusions
-src/README.md
+# ── Node / Backend ────────────────────────────────────────────────────────
+node_modules/
+.env
+
+# ── Sensitive / Privacy ───────────────────────────────────────────────────
+*.pem
+*.key
+*.crt
+.env.*
+!.env.example
+credentials.*
+secrets.*
+
+# ── Temp / Design files ───────────────────────────────────────────────────
+technical/
 assets/temp.html
-thirdparty/libqrencode-4.1.1.zip
 examples/
 resources/icons/icon.png
+thirdparty/libqrencode-4.1.1.zip

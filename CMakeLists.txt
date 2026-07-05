@@ -68,6 +68,7 @@ set(SOURCES
     src/ControlPanel.cpp
     src/ConfigDialog.cpp
     src/TrayManager.cpp
+    src/RelayClient.cpp
 )
 
 set(HEADERS
@@ -80,6 +81,7 @@ set(HEADERS
     src/ControlPanel.h
     src/ConfigDialog.h
     src/TrayManager.h
+    src/RelayClient.h
 )
 
 # ── Executable ───────────────────────────────────────────────────────────

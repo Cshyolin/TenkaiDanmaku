@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹幕发送 · 中继</title>
+    <style>
+        :root {
+            --bg-body: #000000; --bg-card: #0d0d0d; --bg-input: #1a1a1a;
+            --bg-hover: #1a1a1a; --bg-status: #0d0d0d; --bg-toast: #4169E1;
+            --text-primary: #f0f0f0; --text-secondary: #aaaaaa; --text-muted: #666666;
+            --border: #2a2a2a; --border-focus: #4169E1;
+            --accent: #4169E1; --accent-hover: #5A4BD1; --accent-active: #4A3CB5;
+            --shadow: 0 2px 12px rgba(0,0,0,0.5); --radius: 10px; --radius-sm: 6px;
+            --transition: 0.3s ease;
+            --status-dot-on: #4caf50; --status-dot-off: #555555;
+            --scrollbar-track: #1a1a1a; --scrollbar-thumb: #333333; --scrollbar-thumb-hover: #444444;
+        }
+        [data-theme="light"] {
+            --bg-body: #f2f4f8; --bg-card: #ffffff; --bg-input: #f0f2f5;
+            --bg-hover: #f0f2f5; --bg-status: #f8f9fc; --bg-toast: #4169E1;
+            --text-primary: #1a1a2e; --text-secondary: #5a5a7a; --text-muted: #8a8a9a;
+            --border: #e1e4e8; --border-focus: #4169E1;
+            --accent: #4169E1; --accent-hover: #5A4BD1; --accent-active: #4A3CB5;
+            --shadow: 0 2px 16px rgba(0,0,0,0.08);
+            --status-dot-on: #2e7d32; --status-dot-off: #b0b0b0;
+            --scrollbar-track: #e8ecf0; --scrollbar-thumb: #c8ccd0; --scrollbar-thumb-hover: #b0b4b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system,"Microsoft YaHei","PingFang SC",sans-serif;
+            background: var(--bg-body); color: var(--text-primary);
+            padding: 24px 20px; min-height: 100vh;
+            transition: background var(--transition),color var(--transition);
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+        .container { max-width: 600px; width: 100%; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+        .header h3 { font-size: 22px; font-weight: 700; color: var(--accent); transition: color var(--transition); margin: 0; }
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+        .theme-toggle {
+            display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+            border: 1px solid var(--border); border-radius: 20px;
+            background: var(--bg-card); color: var(--text-secondary); font-size: 14px; font-weight: 500;
+            cursor: pointer; transition: all var(--transition); user-select: none; font-family: inherit; line-height: 1;
+        }
+        .theme-toggle:hover { border-color: var(--accent); color: var(--text-primary); transform: scale(1.02); }
+        .theme-toggle:active { transform: scale(0.96); }
+        .theme-toggle .icon { font-size: 18px; }
+        #status { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 14px; background: var(--bg-status); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 14px; transition: background var(--transition),border var(--transition),color var(--transition); flex-wrap: wrap; }
+        #status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--status-dot-off); display: inline-block; flex-shrink: 0; transition: background var(--transition); }
+        #status-dot.connected { background: var(--status-dot-on); }
+        #status-text { transition: color var(--transition); flex: 1; }
+        #toast { display: none; background: var(--bg-toast); color: #fff; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 14px; margin-bottom: 12px; transition: background var(--transition); animation: toastIn 0.3s ease; }
+        #toast.show { display: block; }
+        @keyframes toastIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+        #input-box { display: flex; gap: 10px; margin-bottom: 6px; }
+        #msg { flex: 1; padding: 12px 16px; font-size: 16px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--bg-input); color: var(--text-primary); outline: none; transition: all var(--transition); font-family: inherit; min-width: 0; }
+        #msg::placeholder { color: var(--text-muted); }
+        #msg:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(65,105,225,0.25); }
+        #msg:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-send { padding: 12px 28px; font-size: 16px; font-weight: 700; border: none; border-radius: var(--radius); background: var(--accent); color: #fff; cursor: pointer; transition: all var(--transition); font-family: inherit; white-space: nowrap; letter-spacing: 0.3px; }
+        .btn-send:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(65,105,225,0.35); }
+        .btn-send:active { background: var(--accent-active); transform: translateY(0); box-shadow: none; }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        #color-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+        #color-picker .color-label { font-size: 13px; color: var(--text-muted); white-space: nowrap; user-select: none; transition: color var(--transition); }
+        .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .color-swatch {
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 2px solid transparent; cursor: pointer;
+            transition: all 0.2s ease; flex-shrink: 0;
+            box-shadow: inset 0 0 0 1px rgba(128,128,128,0.25);
+            outline: none; padding: 0; position: relative;
+        }
+        .color-swatch:hover { transform: scale(1.15); }
+        .color-swatch.active { border-color: #fff; box-shadow: 0 0 0 3px var(--accent),inset 0 0 0 1px rgba(128,128,128,0.25); }
+        [data-theme="light"] .color-swatch.active { border-color: #333; }
+        .color-swatch.none {
+            background: transparent; border: 2px dashed var(--text-muted);
+            box-shadow: none;
+        }
+        .color-swatch.none::after {
+            content: '✕'; position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; color: var(--text-muted);
+            pointer-events: none;
+        }
+        .color-swatch.none.active { border-style: solid; border-color: var(--accent); }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
+        .history-header h4 { font-size: 16px; font-weight: 600; color: var(--text-secondary); transition: color var(--transition); margin: 0; }
+        .history-count { font-size: 12px; color: var(--text-muted); transition: color var(--transition); }
+        #history { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; height: 220px; overflow-y: auto; background: var(--bg-card); transition: background var(--transition),border var(--transition); scroll-behavior: smooth; }
+        #history::-webkit-scrollbar { width: 5px; }
+        #history::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 4px; }
+        #history::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+        #history::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+        .danmaku-item { padding: 6px 10px; margin: 3px 0; border-radius: var(--radius-sm); color: var(--text-primary); background: var(--bg-hover); border-left: 3px solid var(--accent); transition: all var(--transition); word-break: break-all; font-size: 14px; line-height: 1.5; animation: itemIn 0.25s ease; cursor: pointer; user-select: none; }
+        .danmaku-item:hover { background: var(--bg-input); }
+        .danmaku-item:first-child { margin-top: 0; }
+        .danmaku-item:last-child { margin-bottom: 0; }
+        .danmaku-item.dbl-hint::after { content: ' ✓ 已填入'; color: var(--accent); font-size: 12px; }
+        @keyframes itemIn { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:translateX(0); } }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px; transition: color var(--transition); user-select: none; }
+        .empty-state .icon { font-size: 32px; margin-bottom: 8px; opacity: 0.6; }
+        .history-tip { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 6px; user-select: none; }
+        @media (max-width:500px) {
+            body { padding: 16px 12px; } .header h3 { font-size: 19px; }
+            .theme-toggle { padding: 6px 12px; font-size: 13px; } .theme-toggle .icon { font-size: 16px; }
+            #input-box { flex-wrap: wrap; } #msg { font-size: 15px; padding: 10px 14px; min-width: 100%; }
+            .btn-send { padding: 10px 20px; font-size: 15px; width: 100%; }
+            .color-swatch { width: 26px; height: 26px; } .color-swatches { gap: 6px; }
+            #history { height: 170px; padding: 8px 10px; } .danmaku-item { font-size: 13px; padding: 5px 8px; }
+            #status { font-size: 12px; padding: 6px 12px; } .history-header h4 { font-size: 14px; }
+        }
+        @media (max-width:380px) {
+            .header { flex-direction: column; align-items: stretch; gap: 8px; }
+            .header-actions { justify-content: flex-end; } .theme-toggle { align-self: flex-end; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h3>📡 弹幕发送 · 中继</h3>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                    <span class="icon" id="themeIcon">🌙</span>
+                    <span class="label" id="themeLabel">深色</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="status">
+            <span id="status-dot"></span>
+            <span id="status-text">连接中...</span>
+        </div>
+
+        <div id="toast"></div>
+
+        <div id="input-box">
+            <input type="text" id="msg" placeholder="输入弹幕…" maxlength="60" autofocus disabled>
+            <button class="btn-send" id="btnSend" onclick="send()" disabled>发送</button>
+        </div>
+
+        <div id="color-picker">
+            <span class="color-label">颜色</span>
+            <div class="color-swatches" id="colorSwatches">
+                <button class="color-swatch none active" data-color="" title="默认白色"></button>
+                <button class="color-swatch" data-color="#FF4444" style="background:#FF4444" title="红色"></button>
+                <button class="color-swatch" data-color="#FF8C00" style="background:#FF8C00" title="橙色"></button>
+                <button class="color-swatch" data-color="#FFD700" style="background:#FFD700" title="金色"></button>
+                <button class="color-swatch" data-color="#4CAF50" style="background:#4CAF50" title="绿色"></button>
+                <button class="color-swatch" data-color="#00BCD4" style="background:#00BCD4" title="青色"></button>
+                <button class="color-swatch" data-color="#448AFF" style="background:#448AFF" title="蓝色"></button>
+                <button class="color-swatch" data-color="#9C27B0" style="background:#9C27B0" title="紫色"></button>
+                <button class="color-swatch" data-color="#E91E63" style="background:#E91E63" title="粉色"></button>
+                <button class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF" title="白色"></button>
+            </div>
+        </div>
+
+        <div class="history-header">
+            <h4>📋 最近弹幕</h4>
+            <span class="history-count" id="historyCount">0 条</span>
+        </div>
+        <div id="history">
+            <div class="empty-state" id="emptyState">
+                <span class="icon">💬</span>
+                <span>暂无弹幕，快来发送第一条吧</span>
+            </div>
+        </div>
+        <div class="history-tip">💡 双击弹幕可快速填入输入框</div>
+    </div>
+
+    <script>
+        // ── Token from URL ────────────────────────────────────────────────
+        var urlParams = new URLSearchParams(window.location.search);
+        var token = urlParams.get('token') || '';
+
+        if (!token) {
+            document.getElementById('status-text').textContent = '错误：缺少 Token';
+            document.getElementById('toast').textContent = 'URL 中未找到 token 参数，请重新扫描二维码';
+            document.getElementById('toast').classList.add('show');
+        }
+
+        // ── WebSocket ────────────────────────────────────────────────────
+        var wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+        var ws = null;
+        var historyDiv = document.getElementById('history');
+        var emptyState = document.getElementById('emptyState');
+        var statusDot = document.getElementById('status-dot');
+        var statusText = document.getElementById('status-text');
+        var toast = document.getElementById('toast');
+        var historyCountEl = document.getElementById('historyCount');
+        var inputEl = document.getElementById('msg');
+        var btnSend = document.getElementById('btnSend');
+        var historyMax = 10;
+        var historyList = [];
+        var selectedColor = '';
+        var authed = false;
+
+        function showToast(msg) {
+            toast.textContent = msg; toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(function() { toast.classList.remove('show'); }, 3000);
+        }
+
+        function setStatus(state) {
+            switch (state) {
+                case 'connecting': statusDot.className = ''; statusText.textContent = '连接中...'; break;
+                case 'authenticating': statusDot.className = ''; statusText.textContent = '认证中...'; break;
+                case 'connected': statusDot.className = 'connected'; statusText.textContent = '已连接'; break;
+                case 'disconnected': statusDot.className = ''; statusText.textContent = '已断开，正在重连...'; break;
+                case 'error': statusDot.className = ''; statusText.textContent = '连接失败'; break;
+            }
+        }
+
+        function setInputEnabled(enabled) {
+            inputEl.disabled = !enabled;
+            btnSend.disabled = !enabled;
+        }
+
+        function closeExistingWs() {
+            if (ws) {
+                try {
+                    ws.onopen = null;
+                    ws.onmessage = null;
+                    ws.onclose = null;
+                    ws.onerror = null;
+                    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                        ws.close();
+                    }
+                } catch (e) {}
+                ws = null;
+            }
+        }
+
+        function connect() {
+            if (!token) { setStatus('error'); return; }
+
+            // Close any previous connection to avoid multiple concurrent sockets
+            closeExistingWs();
+
+            setStatus('connecting');
+            setInputEnabled(false);
+            authed = false;
+
+            try {
+                ws = new WebSocket(wsUrl);
+            } catch (e) {
+                setStatus('error');
+                setTimeout(connect, 5000);
+                return;
+            }
+
+            var authSent = false;
+
+            ws.onopen = function() {
+                setStatus('authenticating');
+                ws.send(JSON.stringify({ type: 'auth', token: token }));
+                authSent = true;
+            };
+
+            ws.onmessage = function(event) {
+                var msg;
+                try { msg = JSON.parse(event.data); } catch (e) { return; }
+
+                if (msg.type === 'auth_ok') {
+                    authed = true;
+                    setStatus('connected');
+                    setInputEnabled(true);
+                    inputEl.focus();
+                    return;
+                }
+
+                if (msg.type === 'error') {
+                    setStatus('error');
+                    setInputEnabled(false);
+                    showToast('连接失败：' + (msg.message || '未知错误'));
+                    ws.close();
+                    return;
+                }
+
+                if (msg.type === 'danmaku') {
+                    var displayText = msg.text || '';
+                    var displayColor = msg.color || '#FFFFFF';
+                    addHistoryWithColor(displayText, displayColor);
+                }
+            };
+
+            ws.onclose = function() {
+                setInputEnabled(false);
+                authed = false;
+                if (authSent) setStatus('disconnected');
+                if (!token) return;
+                setTimeout(connect, 4000);
+            };
+
+            ws.onerror = function() {};
+        }
+
+        // ── Send ─────────────────────────────────────────────────────────
+        function send() {
+            var text = inputEl.value.trim();
+            if (!text) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN || !authed) {
+                showToast('未连接到服务器，请稍候');
+                return;
+            }
+            var payload = text;
+            if (selectedColor) payload += selectedColor;
+            ws.send(JSON.stringify({ type: 'danmaku', text: payload }));
+            inputEl.value = '';
+            inputEl.focus();
+        }
+
+        // ── History with incremental DOM updates ─────────────────────────
+        function addHistoryWithColor(text, color) {
+            // Remove empty state
+            if (emptyState) { emptyState.remove(); emptyState = null; }
+
+            historyList.push({ text: text, color: color });
+
+            // If over capacity, remove oldest item from DOM and array
+            if (historyList.length > historyMax) {
+                historyList.shift();
+                var firstItem = historyDiv.querySelector('.danmaku-item');
+                if (firstItem) firstItem.remove();
+            }
+
+            // Append only the new item — no full innerHTML rebuild
+            var html = '<div class="danmaku-item" style="color:' + color
+                     + '; border-left-color:' + color + '">'
+                     + escapeHtml(text) + '</div>';
+            historyDiv.insertAdjacentHTML('beforeend', html);
+
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+            if (historyCountEl) historyCountEl.textContent = historyList.length + ' 条';
+        }
+
+        // ── Color picker ─────────────────────────────────────────────────
+        document.getElementById('colorSwatches').addEventListener('click', function(e) {
+            var swatch = e.target.closest('.color-swatch');
+            if (!swatch) return;
+            if (swatch.classList.contains('active')) {
+                selectedColor = '';
+                swatch.classList.remove('active');
+                var none = this.querySelector('.color-swatch.none');
+                if (none) none.classList.add('active');
+            } else {
+                this.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('active'); });
+                swatch.classList.add('active');
+                selectedColor = swatch.dataset.color;
+            }
+        });
+
+        // ── Double-click: fill input ─────────────────────────────────────
+        historyDiv.addEventListener('dblclick', function(e) {
+            var item = e.target.closest('.danmaku-item');
+            if (!item) return;
+            // Server already strips colour codes; textContent is plain text
+            inputEl.value = item.textContent.trim();
+            inputEl.focus();
+            item.classList.add('dbl-hint');
+            setTimeout(function() { item.classList.remove('dbl-hint'); }, 1200);
+        });
+
+        function escapeHtml(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        // ── Keyboard ─────────────────────────────────────────────────────
+        document.getElementById('msg').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') send();
+        });
+
+        // ── Theme ────────────────────────────────────────────────────────
+        (function initTheme() {
+            var toggle = document.getElementById('themeToggle');
+            var icon = document.getElementById('themeIcon');
+            var label = document.getElementById('themeLabel');
+            var stored = 'dark';
+            try { var t = localStorage.getItem('danmaku-theme'); if (t) stored = t; } catch(e) {}
+            apply(stored);
+            toggle.addEventListener('click', function() {
+                var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+                var next = cur === 'dark' ? 'light' : 'dark';
+                apply(next);
+                try { localStorage.setItem('danmaku-theme', next); } catch(e) {}
+            });
+            function apply(t) {
+                document.documentElement.setAttribute('data-theme', t);
+                icon.textContent = t === 'light' ? '☀️' : '🌙';
+                label.textContent = t === 'light' ? '浅色' : '深色';
+            }
+        })();
+
+        // ── Start ────────────────────────────────────────────────────────
+        connect();
+    </script>
+</body>
+</html>

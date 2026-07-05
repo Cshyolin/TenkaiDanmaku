@@ -3,32 +3,36 @@
 #include <QWidget>
 
 class QLabel;
+class QComboBox;
+class QStackedWidget;
 
-/// Main control panel showing two QR codes (IPv6 + IPv4) and status info.
-/// Closing the window hides it to tray rather than quitting.
+/// Main control panel with mode switching (Local / Relay) and QR codes.
 class ControlPanel : public QWidget {
     Q_OBJECT
 public:
+    enum class Mode { Local, Relay };
+
     explicit ControlPanel(QWidget *parent = nullptr);
 
-    /// Set the IPv6 URL to encode in the QR code.
+    // ── Local mode ────────────────────────────────────────────────────
     void setIPv6Url(const QString &url);
     void setIPv4Url(const QString &url);
-
-    /// Show / hide the QR code areas.
-    void setQrCodesVisible(bool visible);
-
-    /// Update availability status.
     void setIPv6Available(bool avail);
     void setIPv4Available(bool avail);
 
-signals:
-    /// Emitted when the window is hidden (so tray menu can update).
-    void windowHidden();
+    // ── Relay mode ────────────────────────────────────────────────────
+    void setRelayUrl(const QString &url);
+    void setRelayConnected(bool connected);
 
-public:
-    /// Set to true before quitting so closeEvent accepts the close.
+    // ── General ───────────────────────────────────────────────────────
+    void setMode(Mode mode);
+    Mode mode() const { return m_mode; }
+    void setQrCodesVisible(bool visible);
     void setQuitting(bool v) { m_quitting = v; }
+
+signals:
+    void windowHidden();
+    void modeChanged(ControlPanel::Mode mode);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -37,6 +41,10 @@ private:
     void setupUi();
     QPixmap createPlaceholder(const QString &text, int size);
 
+    // Mode selector
+    QComboBox *m_modeCombo = nullptr;
+
+    // Local mode widgets
     QLabel *m_ipv6QrLabel  = nullptr;
     QLabel *m_ipv4QrLabel  = nullptr;
     QLabel *m_ipv6UrlLabel = nullptr;
@@ -45,5 +53,16 @@ private:
     QLabel *m_ipv4Status   = nullptr;
     QWidget *m_ipv6Group   = nullptr;
     QWidget *m_ipv4Group   = nullptr;
-    bool     m_quitting    = false;
+    QWidget *m_localPanel  = nullptr;
+
+    // Relay mode widgets
+    QWidget *m_relayPanel  = nullptr;
+    QLabel  *m_relayQrLabel   = nullptr;
+    QLabel  *m_relayUrlLabel  = nullptr;
+    QLabel  *m_relayStatus    = nullptr;
+
+    QStackedWidget *m_stack = nullptr;
+
+    Mode m_mode       = Mode::Local;
+    bool m_quitting   = false;
 };

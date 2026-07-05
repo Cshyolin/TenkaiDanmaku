@@ -440,11 +440,15 @@
             if (empty) empty.remove();
 
             historyList.push(text);
-            if (historyList.length > historyMax) historyList.shift();
+            if (historyList.length > historyMax) {
+                historyList.shift();
+                var firstItem = historyDiv.querySelector('.danmaku-item');
+                if (firstItem) firstItem.remove();
+            }
 
-            historyDiv.innerHTML = historyList.map(function(t) {
-                return '<div class="danmaku-item">' + escapeHtml(t) + '</div>';
-            }).join('');
+            // Incremental append — no full innerHTML rebuild
+            historyDiv.insertAdjacentHTML('beforeend',
+                '<div class="danmaku-item">' + escapeHtml(text) + '</div>');
 
             historyDiv.scrollTop = historyDiv.scrollHeight;
             updateHistoryCount();
