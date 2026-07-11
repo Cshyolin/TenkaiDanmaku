@@ -1,6 +1,8 @@
 #include "ControlPanel.h"
 #include "QRCodeGenerator.h"
 
+#include "Logger.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -12,6 +14,8 @@
 #include <QApplication>
 #include <QScreen>
 #include <QTimer>
+
+#include <QDebug>
 
 ControlPanel::ControlPanel(QWidget *parent)
     : QWidget(parent)
@@ -86,6 +90,8 @@ void ControlPanel::setupUi()
     m_ipv6Header = v6Hdr;
     v6Hdr->setStyleSheet("font-weight: bold; color: #4caf50;");
     v6Hdr->setAlignment(Qt::AlignCenter);
+    v6Hdr->setMaximumHeight(30);
+    v6Hdr->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     v6Lay->addWidget(v6Hdr);
     m_ipv6QrLabel = new QLabel;
     m_ipv6QrLabel->setFixedSize(200, 200);
@@ -102,6 +108,8 @@ void ControlPanel::setupUi()
     v6Lay->addWidget(m_ipv6UrlLabel);
     m_ipv6Status = new QLabel;
     m_ipv6Status->setAlignment(Qt::AlignCenter);
+    m_ipv6Status->setMaximumHeight(30);
+    m_ipv6Status->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_ipv6Status->setStyleSheet("color: #888; font-size: 11px;");
     v6Lay->addWidget(m_ipv6Status);
     localRow->addWidget(m_ipv6Group);
@@ -115,6 +123,8 @@ void ControlPanel::setupUi()
     m_ipv4Header = v4Hdr;
     v4Hdr->setStyleSheet("font-weight: bold; color: #2196f3;");
     v4Hdr->setAlignment(Qt::AlignCenter);
+    v4Hdr->setMaximumHeight(30);
+    v4Hdr->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     v4Lay->addWidget(v4Hdr);
     m_ipv4QrLabel = new QLabel;
     m_ipv4QrLabel->setFixedSize(200, 200);
@@ -131,6 +141,8 @@ void ControlPanel::setupUi()
     v4Lay->addWidget(m_ipv4UrlLabel);
     m_ipv4Status = new QLabel;
     m_ipv4Status->setAlignment(Qt::AlignCenter);
+    m_ipv4Status->setMaximumHeight(30);
+    m_ipv4Status->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_ipv4Status->setStyleSheet("color: #888; font-size: 11px;");
     v4Lay->addWidget(m_ipv4Status);
     localRow->addWidget(m_ipv4Group);
@@ -146,6 +158,8 @@ void ControlPanel::setupUi()
     m_relayHeader = relayHdr;
     relayHdr->setStyleSheet("font-weight: bold; color: #e94560; font-size: 14px;");
     relayHdr->setAlignment(Qt::AlignCenter);
+    relayHdr->setMaximumHeight(30);
+    relayHdr->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     relayLay->addWidget(relayHdr);
 
     m_relayQrLabel = new QLabel;
@@ -165,6 +179,8 @@ void ControlPanel::setupUi()
 
     m_relayStatus = new QLabel;
     m_relayStatus->setAlignment(Qt::AlignCenter);
+    m_relayStatus->setMaximumHeight(30);
+    m_relayStatus->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_relayStatus->setStyleSheet("color: #888; font-size: 11px;");
     relayLay->addWidget(m_relayStatus);
 
@@ -174,7 +190,7 @@ void ControlPanel::setupUi()
     m_stack->addWidget(m_relayPanel); // index 1
 
     mainLayout->addWidget(m_stack, 1);
-    mainLayout->addStretch();
+    mainLayout->addStretch(0);
 
     // Hint
     auto *hint = new QLabel("点击 ✕ 将最小化到系统托盘");
@@ -311,6 +327,8 @@ void ControlPanel::updateQRLabelSizes()
         m_ipv6QrLabel->setFixedSize(side, side);
         m_ipv4QrLabel->setFixedSize(side, side);
 
+        //Logger::instance()->logEvent(
+        //    QString("QRLabelSizes更新，panelW:%1 ; panelH:%2 ; nonQrh:%3 ; availW:%4 ; availH:%5 ; side:%6 ;").arg(panelW).arg(panelH).arg(nonQrH).arg(availW).arg(availH).arg(side));
     } else {
         int panelW = m_relayPanel->width();
         int panelH = m_relayPanel->height();
@@ -329,6 +347,9 @@ void ControlPanel::updateQRLabelSizes()
         side = qMin(side, maxQrSide);
 
         m_relayQrLabel->setFixedSize(side, side);
+        
+        //Logger::instance()->logEvent(
+        //    QString("QRLabelSizes更新，panelW:%1 ; panelH:%2 ; nonQrh:%3 ; availW:%4 ; availH:%5 ; side:%6 ;").arg(panelW).arg(panelH).arg(nonQrH).arg(availW).arg(availH).arg(side));
     }
 
     m_updatingSizes = false;
