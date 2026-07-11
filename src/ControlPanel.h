@@ -36,15 +36,19 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     void setupUi();
+    void updateQRLabelSizes();
     QPixmap createPlaceholder(const QString &text, int size);
 
     // Mode selector
     QComboBox *m_modeCombo = nullptr;
 
     // Local mode widgets
+    QLabel *m_ipv6Header = nullptr;
+    QLabel *m_ipv4Header = nullptr;
     QLabel *m_ipv6QrLabel  = nullptr;
     QLabel *m_ipv4QrLabel  = nullptr;
     QLabel *m_ipv6UrlLabel = nullptr;
@@ -57,6 +61,7 @@ private:
 
     // Relay mode widgets
     QWidget *m_relayPanel  = nullptr;
+    QLabel  *m_relayHeader   = nullptr;
     QLabel  *m_relayQrLabel   = nullptr;
     QLabel  *m_relayUrlLabel  = nullptr;
     QLabel  *m_relayStatus    = nullptr;
@@ -65,4 +70,5 @@ private:
 
     Mode m_mode       = Mode::Local;
     bool m_quitting   = false;
+    bool m_updatingSizes = false;
 };

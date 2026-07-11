@@ -7,9 +7,11 @@
 #include <QComboBox>
 #include <QStackedWidget>
 #include <QCloseEvent>
+#include <QResizeEvent>
 #include <QPainter>
 #include <QApplication>
 #include <QScreen>
+#include <QTimer>
 
 ControlPanel::ControlPanel(QWidget *parent)
     : QWidget(parent)
@@ -73,7 +75,7 @@ void ControlPanel::setupUi()
     localRow->setSpacing(20);
     localRow->setContentsMargins(0, 0, 0, 0);
 
-    const int qrSize = 250;
+    const int qrSize = 2048;
 
     // IPv6
     m_ipv6Group = new QWidget;
@@ -81,16 +83,19 @@ void ControlPanel::setupUi()
     v6Lay->setContentsMargins(0, 0, 0, 0);
     v6Lay->setSpacing(4);
     auto *v6Hdr = new QLabel("IPv6 公网");
+    m_ipv6Header = v6Hdr;
     v6Hdr->setStyleSheet("font-weight: bold; color: #4caf50;");
     v6Hdr->setAlignment(Qt::AlignCenter);
     v6Lay->addWidget(v6Hdr);
     m_ipv6QrLabel = new QLabel;
-    m_ipv6QrLabel->setFixedSize(qrSize, qrSize);
+    m_ipv6QrLabel->setFixedSize(200, 200);
+    m_ipv6QrLabel->setScaledContents(true);
     m_ipv6QrLabel->setAlignment(Qt::AlignCenter);
     m_ipv6QrLabel->setStyleSheet("border: 2px solid #4caf50; border-radius: 4px;");
     v6Lay->addWidget(m_ipv6QrLabel, 0, Qt::AlignCenter);
     m_ipv6UrlLabel = new QLabel;
     m_ipv6UrlLabel->setWordWrap(true);
+    m_ipv6UrlLabel->setMaximumHeight(36);
     m_ipv6UrlLabel->setAlignment(Qt::AlignCenter);
     m_ipv6UrlLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_ipv6UrlLabel->setStyleSheet("color: #ccc; font-size: 11px;");
@@ -107,16 +112,19 @@ void ControlPanel::setupUi()
     v4Lay->setContentsMargins(0, 0, 0, 0);
     v4Lay->setSpacing(4);
     auto *v4Hdr = new QLabel("IPv4 局域网");
+    m_ipv4Header = v4Hdr;
     v4Hdr->setStyleSheet("font-weight: bold; color: #2196f3;");
     v4Hdr->setAlignment(Qt::AlignCenter);
     v4Lay->addWidget(v4Hdr);
     m_ipv4QrLabel = new QLabel;
-    m_ipv4QrLabel->setFixedSize(qrSize, qrSize);
+    m_ipv4QrLabel->setFixedSize(200, 200);
+    m_ipv4QrLabel->setScaledContents(true);
     m_ipv4QrLabel->setAlignment(Qt::AlignCenter);
     m_ipv4QrLabel->setStyleSheet("border: 2px solid #2196f3; border-radius: 4px;");
     v4Lay->addWidget(m_ipv4QrLabel, 0, Qt::AlignCenter);
     m_ipv4UrlLabel = new QLabel;
     m_ipv4UrlLabel->setWordWrap(true);
+    m_ipv4UrlLabel->setMaximumHeight(36);
     m_ipv4UrlLabel->setAlignment(Qt::AlignCenter);
     m_ipv4UrlLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_ipv4UrlLabel->setStyleSheet("color: #ccc; font-size: 11px;");
@@ -135,18 +143,21 @@ void ControlPanel::setupUi()
     relayLay->setAlignment(Qt::AlignCenter);
 
     auto *relayHdr = new QLabel("公网中继");
+    m_relayHeader = relayHdr;
     relayHdr->setStyleSheet("font-weight: bold; color: #e94560; font-size: 14px;");
     relayHdr->setAlignment(Qt::AlignCenter);
     relayLay->addWidget(relayHdr);
 
     m_relayQrLabel = new QLabel;
-    m_relayQrLabel->setFixedSize(qrSize, qrSize);
+    m_relayQrLabel->setFixedSize(200, 200);
+    m_relayQrLabel->setScaledContents(true);
     m_relayQrLabel->setAlignment(Qt::AlignCenter);
     m_relayQrLabel->setStyleSheet("border: 2px solid #e94560; border-radius: 4px;");
     relayLay->addWidget(m_relayQrLabel, 0, Qt::AlignCenter);
 
     m_relayUrlLabel = new QLabel;
     m_relayUrlLabel->setWordWrap(true);
+    m_relayUrlLabel->setMaximumHeight(36);
     m_relayUrlLabel->setAlignment(Qt::AlignCenter);
     m_relayUrlLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_relayUrlLabel->setStyleSheet("color: #ccc; font-size: 11px;");
@@ -190,21 +201,21 @@ void ControlPanel::setMode(Mode mode)
 void ControlPanel::setIPv6Url(const QString &url)
 {
     m_ipv6UrlLabel->setText(url);
-    QPixmap qr = QRCodeGenerator::generate(url, 250);
+    QPixmap qr = QRCodeGenerator::generate(url, 1024);
     if (!qr.isNull()) m_ipv6QrLabel->setPixmap(qr);
 }
 
 void ControlPanel::setIPv4Url(const QString &url)
 {
     m_ipv4UrlLabel->setText(url);
-    QPixmap qr = QRCodeGenerator::generate(url, 250);
+    QPixmap qr = QRCodeGenerator::generate(url, 1024);
     if (!qr.isNull()) m_ipv4QrLabel->setPixmap(qr);
 }
 
 void ControlPanel::setIPv6Available(bool avail)
 {
     if (!avail) {
-        m_ipv6QrLabel->setPixmap(createPlaceholder("当前网络不支持\nIPv6", 250));
+        m_ipv6QrLabel->setPixmap(createPlaceholder("当前网络不支持\nIPv6", 1024));
         m_ipv6UrlLabel->setText("不可用");
         m_ipv6Status->setText("当前网络不支持");
     } else {
@@ -215,7 +226,7 @@ void ControlPanel::setIPv6Available(bool avail)
 void ControlPanel::setIPv4Available(bool avail)
 {
     if (!avail) {
-        m_ipv4QrLabel->setPixmap(createPlaceholder("当前网络不支持\nIPv4", 250));
+        m_ipv4QrLabel->setPixmap(createPlaceholder("当前网络不支持\nIPv4", 1024));
         m_ipv4UrlLabel->setText("不可用");
         m_ipv4Status->setText("当前网络不支持");
     } else {
@@ -227,7 +238,6 @@ void ControlPanel::setQrCodesVisible(bool visible)
 {
     m_localPanel->setVisible(visible && m_mode == Mode::Local);
     m_relayPanel->setVisible(visible && m_mode == Mode::Relay);
-    adjustSize();
 }
 
 // ── Relay setters ────────────────────────────────────────────────────────
@@ -235,7 +245,7 @@ void ControlPanel::setQrCodesVisible(bool visible)
 void ControlPanel::setRelayUrl(const QString &url)
 {
     m_relayUrlLabel->setText(url);
-    QPixmap qr = QRCodeGenerator::generate(url, 250);
+    QPixmap qr = QRCodeGenerator::generate(url, 1024);
     if (!qr.isNull()) m_relayQrLabel->setPixmap(qr);
 }
 
@@ -259,6 +269,69 @@ QPixmap ControlPanel::createPlaceholder(const QString &text, int size)
     p.drawText(pm.rect(), Qt::AlignCenter, text);
     p.end();
     return pm;
+}
+
+// ── Resize → QR scaling ────────────────────────────────────────────────────
+
+void ControlPanel::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    // Defer to next event loop so QStackedWidget has laid out m_localPanel
+    QTimer::singleShot(0, this, [this] { updateQRLabelSizes(); });
+}
+
+void ControlPanel::updateQRLabelSizes()
+{
+    if (m_updatingSizes) return;
+    m_updatingSizes = true;
+
+    const int margin  = 16;
+    const int spacing = 20;
+    const int innerSpacing = 4;
+    const int maxQrSide = 1600;
+
+    if (m_mode == Mode::Local) {
+        int panelW = m_localPanel->width();
+        int panelH = m_localPanel->height();
+
+        int availW = (panelW - margin * 2 - spacing) / 2;
+        if (availW < 80) availW = 80;
+
+        int nonQrH = qMax(
+            m_ipv6Header->height() + m_ipv6UrlLabel->height() + m_ipv6Status->height(),
+            m_ipv4Header->height() + m_ipv4UrlLabel->height() + m_ipv4Status->height()
+        ) + innerSpacing * 3;
+
+        int availH = panelH - margin * 2 - nonQrH;
+        if (availH < 80) availH = 80;
+
+        int side = qMin(availW, availH);
+        side = qMin(side, maxQrSide);
+
+        m_ipv6QrLabel->setFixedSize(side, side);
+        m_ipv4QrLabel->setFixedSize(side, side);
+
+    } else {
+        int panelW = m_relayPanel->width();
+        int panelH = m_relayPanel->height();
+
+        int nonQrH = m_relayHeader->height()
+                   + m_relayUrlLabel->height()
+                   + m_relayStatus->height()
+                   + innerSpacing * 3;
+
+        int availW = panelW - margin * 2;
+        int availH = panelH - margin * 2 - nonQrH;
+        if (availW < 80) availW = 80;
+        if (availH < 80) availH = 80;
+
+        int side = qMin(availW, availH);
+        side = qMin(side, maxQrSide);
+
+        m_relayQrLabel->setFixedSize(side, side);
+    }
+
+    m_updatingSizes = false;
 }
 
 // ── Close → hide to tray ─────────────────────────────────────────────────
